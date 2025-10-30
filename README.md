@@ -1,5 +1,29 @@
 # Picapica Photo Booth
 
+## Additional Notes
+## Local clone assets
+
+This repository includes a pixel-accurate clone of the Picapica landing page under the route `/clone`.
+To make the clone fully offline and exact, the project expects the photostrip image and Montserrat font files to be present under `public/assets` and `public/assets/fonts`.
+
+I've included a small PowerShell helper to download those assets automatically:
+1. From the project root run:
+
+```powershell
+.\download-assets.ps1
+```
+
+This will create:
+
+- `public/assets/picapica-photostrip.png`
+- `public/assets/fonts/Montserrat-Regular.ttf`
+- `public/assets/fonts/Montserrat-Bold.ttf`
+
+The clone component prefers the local assets at runtime and will fall back to the original remote URLs if the local files are missing.
+
+License / provenance: you confirmed you have permission to use these assets. Keep any required attributions in the UI (the footer credits the original author).
+# Picapica Photo Booth
+
 A ReactJS replica of the Picapica Photo Booth website - a web-based photo booth that captures 4 photos and creates custom photo strips with filters and frames.
 
 ## Features

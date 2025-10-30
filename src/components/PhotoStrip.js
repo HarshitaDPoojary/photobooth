@@ -1,11 +1,20 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import GIF from 'gif.js';
+import QRCode from 'qrcode';
 import './PhotoStrip.css';
 
-const PhotoStrip = ({ photos, filter, frame, folderName, selectedLayout, onRetake, onDownload }) => {
+const PhotoStrip = ({ photos, filter, frame, folderName, selectedLayout, selectedSticker, backgroundStickers, onRetake, onDownload }) => {
   const stripRef = useRef(null);
+  const canvasRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState(null);
+  const [showEditPanel, setShowEditPanel] = useState(false);
+  const [currentFilter, setCurrentFilter] = useState(filter || 'none');
+  const [currentFrame, setCurrentFrame] = useState(frame || null);
+  const [placedStickers, setPlacedStickers] = useState([]);
+  const [scatteredStickers, setScatteredStickers] = useState([]);
 
   console.log('PhotoStrip received photos:', photos);
   console.log('PhotoStrip photos length:', photos.length);
@@ -102,14 +111,98 @@ const PhotoStrip = ({ photos, filter, frame, folderName, selectedLayout, onRetak
     return layoutClasses[layout] || 'layout-vertical-strip';
   };
 
+  // Generate scattered background stickers when enabled/config changes
+  useEffect(() => {
+    if (!backgroundStickers?.enabled || !Array.isArray(backgroundStickers?.emojis) || backgroundStickers.emojis.length === 0) {
+      setScatteredStickers([]);
+      return;
+    }
+    // Determine how many to render based on density and layout size
+    const count = Math.max(5, Math.min(80, Number(backgroundStickers.density || 20)));
+    const next = [];
+    for (let i = 0; i < count; i++) {
+      const emoji = backgroundStickers.emojis[i % backgroundStickers.emojis.length];
+      next.push({
+        id: `bg-${i}`,
+        emoji,
+        left: Math.random() * 90 + 5, // 5% to 95%
+        top: Math.random() * 90 + 5,
+        rotate: Math.random() * 40 - 20,
+        size: Math.random() * 12 + 10 // 10px - 22px
+      });
+    }
+    setScatteredStickers(next);
+  }, [backgroundStickers]);
+
+  // Handle placing character sticker on click
+  const handleCanvasClick = (e) => {
+    if (!selectedSticker || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100; // percent
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    const size = 10; // percent width
+    const newSticker = {
+      id: `placed-${Date.now()}`,
+      emoji: selectedSticker.emoji || '⭐',
+      x,
+      y,
+      size,
+    };
+    setPlacedStickers((prev) => [...prev, newSticker]);
+  };
+
+  // Simple drag handling for placed stickers
+  const startDrag = (id, startEvent) => {
+    startEvent.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+
+    const onMove = (e) => {
+      setPlacedStickers((prev) => prev.map((s) => {
+        if (s.id !== id) return s;
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        return { ...s, x, y };
+      }));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onUp);
+    };
+    const onTouchMove = (te) => {
+      if (!te.touches || te.touches.length === 0) return;
+      const t = te.touches[0];
+      setPlacedStickers((prev) => prev.map((s) => {
+        if (s.id !== id) return s;
+        const x = ((t.clientX - rect.left) / rect.width) * 100;
+        const y = ((t.clientY - rect.top) / rect.height) * 100;
+        return { ...s, x, y };
+      }));
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onTouchMove);
+    window.addEventListener('touchend', onUp);
+  };
+
+  const removeSticker = (id) => {
+    setPlacedStickers((prev) => prev.filter((s) => s.id !== id));
+  };
+
   const getLayoutName = (layout) => {
     const layoutNames = {
-      'layout-a': 'Layout A (4 photos)',
+      'layout-a': 'Layout A (6 photos)',
       'layout-b': 'Layout B (3 photos)',
       'layout-c': 'Layout C (2 photos)',
-      'layout-d': 'Layout D (6 photos)'
+      'layout-d': 'Layout D (4 photos)'
     };
-    return layoutNames[layout] || 'Layout A (4 photos)';
+    return layoutNames[layout] || 'Layout A (6 photos)';
   };
 
   const handleDownload = async () => {
@@ -117,10 +210,16 @@ const PhotoStrip = ({ photos, filter, frame, folderName, selectedLayout, onRetak
     
     setIsDownloading(true);
     try {
-      const canvas = await html2canvas(stripRef.current, {
+      const target = stripRef.current;
+      const rect = target.getBoundingClientRect();
+      const canvas = await html2canvas(target, {
         backgroundColor: '#ffffff',
         scale: 2,
-        useCORS: true
+        useCORS: true,
+        width: Math.ceil(rect.width),
+        height: Math.ceil(rect.height),
+        windowWidth: Math.ceil(rect.width),
+        windowHeight: Math.ceil(rect.height)
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -160,18 +259,75 @@ const PhotoStrip = ({ photos, filter, frame, folderName, selectedLayout, onRetak
     
     setIsDownloading(true);
     try {
-      const canvas = await html2canvas(stripRef.current, {
+      const target = stripRef.current;
+      const rect = target.getBoundingClientRect();
+      const canvas = await html2canvas(target, {
         backgroundColor: '#ffffff',
         scale: 2,
-        useCORS: true
+        useCORS: true,
+        width: Math.ceil(rect.width),
+        height: Math.ceil(rect.height),
+        windowWidth: Math.ceil(rect.width),
+        windowHeight: Math.ceil(rect.height)
       });
       
       const link = document.createElement('a');
       link.download = 'picapica-photostrip.png';
       link.href = canvas.toDataURL();
       link.click();
+
+      // Generate QR code for the downloaded image
+      const qrData = await QRCode.toDataURL(link.href);
+      setQrCodeUrl(qrData);
     } catch (error) {
       console.error('Error downloading image:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleGifDownload = async () => {
+    if (!photos || photos.length === 0) return;
+    
+    setIsDownloading(true);
+    try {
+      const gif = new GIF({
+        workers: 2,
+        quality: 10,
+        width: 320,
+        height: 240
+      });
+
+      // Convert each photo URL to an image element
+      const images = await Promise.all(
+        photos.map(photoUrl => {
+          return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.src = photoUrl;
+          });
+        })
+      );
+
+      // Add each image to the GIF
+      images.forEach(image => {
+        gif.addFrame(image, { delay: 500 }); // 500ms delay between frames
+      });
+
+      gif.on('finished', function(blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'picapica-animation.gif';
+        link.click();
+        
+        URL.revokeObjectURL(url);
+      });
+
+      gif.render();
+    } catch (error) {
+      console.error('Error creating GIF:', error);
     } finally {
       setIsDownloading(false);
     }
@@ -182,35 +338,54 @@ const PhotoStrip = ({ photos, filter, frame, folderName, selectedLayout, onRetak
       <div className="photo-strip-wrapper">
         <div 
           ref={stripRef}
-          className={`photo-strip ${getFrameClass(frame)} ${getLayoutClass(selectedLayout)}`}
+          className={`photo-strip ${getLayoutClass(selectedLayout)}`}
           data-layout={selectedLayout}
         >
-          <div className="strip-header">
-            <h2 className="strip-title">Picapica Photo Booth</h2>
-            <div className="strip-date">{new Date().toLocaleDateString()}</div>
-          </div>
-          
-          <div className="photos-container">
-            <div className="layout-info">
-              <span className="layout-name">{getLayoutName(selectedLayout)}</span>
-            </div>
-            <div className="photos-grid">
+          <div className={`polaroid-frame ${getFrameClass(frame)}`}>
+            <div
+              ref={canvasRef}
+              className="polaroid-canvas"
+              onClick={handleCanvasClick}
+            >
+              {/* Background scattered stickers */}
+              {scatteredStickers.length > 0 && (
+                <div className="sticker-bg-layer" aria-hidden="true">
+                  {scatteredStickers.map((s) => (
+                    <span
+                      key={s.id}
+                      className="bg-sticker"
+                      style={{
+                        left: `${s.left}%`,
+                        top: `${s.top}%`,
+                        transform: `rotate(${s.rotate}deg)`,
+                        fontSize: `${s.size}px`
+                      }}
+                    >
+                      {s.emoji}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="photos-container">
+                <div className="photos-grid">
               {photos && photos.length > 0 ? (
                 photos.map((photo, index) => (
                   <div key={index} className="photo-container">
-                    <img
-                      src={photo}
-                      alt={`Photo ${index + 1}`}
-                      className={`photo ${filter !== 'none' ? `filter-${filter}` : ''}`}
-                      onError={(e) => {
-                        console.error(`Failed to load photo ${index + 1}:`, photo);
-                        e.target.style.display = 'none';
-                      }}
-                      onLoad={() => {
-                        console.log(`Successfully loaded photo ${index + 1}:`, photo);
-                      }}
-                    />
-                    <div className="photo-number">{index + 1}</div>
+                    <div className="photo-wrapper">
+                      <img
+                        src={photo}
+                        alt={`Photo ${index + 1}`}
+                        className="photo"
+                        onError={(e) => {
+                          console.error(`Failed to load photo ${index + 1}:`, photo);
+                          e.target.style.display = 'none';
+                        }}
+                        onLoad={() => {
+                          console.log(`Successfully loaded photo ${index + 1}:`, photo);
+                        }}
+                      />
+                    </div>
                   </div>
                 ))
               ) : (
@@ -218,14 +393,29 @@ const PhotoStrip = ({ photos, filter, frame, folderName, selectedLayout, onRetak
                   <p>No photos captured</p>
                 </div>
               )}
+                </div>
+              </div>
+
+              {/* Placed character stickers */}
+              {placedStickers.length > 0 && (
+                <div className="sticker-char-layer">
+                  {placedStickers.map((s) => (
+                    <div
+                      key={s.id}
+                      className="char-sticker"
+                      style={{ left: `${s.x}%`, top: `${s.y}%` }}
+                      onMouseDown={(e) => startDrag(s.id, e)}
+                      onTouchStart={(e) => startDrag(s.id, e)}
+                    >
+                      <span className="char-emoji" style={{ fontSize: `${s.size}vmin` }}>{s.emoji}</span>
+                      <button className="sticker-remove" onClick={(e) => { e.stopPropagation(); removeSticker(s.id); }} aria-label="Remove sticker">×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-          
-          <div className="strip-footer">
-            <div className="strip-url">picapicabooth.com</div>
-            {folderName && (
-              <div className="strip-folder">Saved as: {folderName}</div>
-            )}
+
+            <div className="polaroid-bottom-space" />
           </div>
         </div>
       </div>
@@ -254,7 +444,22 @@ const PhotoStrip = ({ photos, filter, frame, folderName, selectedLayout, onRetak
           >
             {isDownloading ? 'Downloading...' : 'Download PDF'}
           </button>
+
+          <button 
+            onClick={handleGifDownload}
+            className="download-btn"
+            disabled={isDownloading || !photos || photos.length === 0}
+          >
+            {isDownloading ? 'Creating GIF...' : 'Download GIF'}
+          </button>
         </div>
+
+        {qrCodeUrl && (
+          <div className="qr-code-container">
+            <h4>Scan to Download</h4>
+            <img src={qrCodeUrl} alt="QR Code for download" className="qr-code" />
+          </div>
+        )}
       </div>
     </div>
   );

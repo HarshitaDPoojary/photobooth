@@ -6,107 +6,80 @@
 }
 
 .photo-strip-wrapper {
-  background: white;
-  border-radius: 1rem;
+  background: transparent;
   padding: 2rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   max-width: 600px;
   width: 100%;
 }
 
 .photo-strip {
-  background: white;
+  background: transparent;
   border-radius: 0.5rem;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
+  padding: 0;
+  box-shadow: none;
 }
 
-.frame-default {
-  border: 3px solid #e5e7eb;
+.polaroid-frame {
+  position: relative;
+  padding: 1rem 1rem 2.5rem 1rem; /* extra bottom space */
+  border-radius: 0; /* squared corners as requested */
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
-.frame-colorful {
-  border: 5px solid;
-  border-image: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57) 1;
-}
+/* Frame color/patterns */
+.polaroid-frame.frame-default { background: #ffffff; }
+.polaroid-frame.frame-colorful { background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 25%, #45b7d1 50%, #96ceb4 75%, #feca57 100%); }
+.polaroid-frame.frame-elegant { background: repeating-linear-gradient(45deg, #8b5cf6 0 10px, #7c3aed 10px 20px); }
+.polaroid-frame.frame-fun { background: radial-gradient(circle at 20% 20%, #f59e0b, #fcd34d); }
+.polaroid-frame.frame-vintage { background: #fef3c7; background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 12px 12px; }
 
-.frame-elegant {
-  border: 4px solid #8b5cf6;
-  box-shadow: 0 0 0 2px #f3e8ff;
-}
-
-.frame-fun {
-  border: 6px solid #f59e0b;
-  border-radius: 1rem;
-  box-shadow: 0 0 0 3px #fef3c7;
-}
-
-.frame-vintage {
-  border: 4px solid #92400e;
-  background: #fef3c7;
-}
-
-.strip-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.polaroid-canvas {
+  position: relative;
+  background: #fff; /* white polaroid inner */
+  border-radius: 0; /* squared corners */
   padding: 1rem;
-  text-align: center;
+  overflow: hidden;
 }
 
-.strip-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin: 0;
-}
-
-.strip-date {
-  font-size: 0.9rem;
-  opacity: 0.9;
-  margin-top: 0.25rem;
+.polaroid-bottom-space {
+  height: 36px; /* caption space */
 }
 
 .photos-container {
-  padding: 1rem;
-  background: white;
-}
-
-.layout-info {
-  text-align: center;
-  margin-bottom: 1rem;
-}
-
-.layout-name {
-  background: #f3f4f6;
-  color: #374151;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
+  background: transparent;
 }
 
 .photos-grid {
-  display: grid;
-  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-/* Layout A: 4 photos vertical strip */
+/* Layout A: 6 photos in 2x3 grid */
 .photo-strip[data-layout="layout-a"] .photos-grid {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-/* Layout B: 3 photos vertical strip */
-.photo-strip[data-layout="layout-b"] .photos-grid {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-/* Layout C: 2 photos vertical wide */
-.photo-strip[data-layout="layout-c"] .photos-grid {
+  display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
 
+/* Layout B: 3 photos vertical strip */
+.photo-strip[data-layout="layout-b"] .photos-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Layout C: 2 photos vertical wide */
+.photo-strip[data-layout="layout-c"] .photos-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .photo-strip[data-layout="layout-c"] .photo-container {
-  aspect-ratio: 3/4;
+  padding-bottom: 1.5rem;
 }
 
 /* Layout D: 6 photos grid */
@@ -121,10 +94,68 @@
 
 .photo-container {
   position: relative;
-  aspect-ratio: 3/4;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.photo-container::before {
+  content: '';
+  display: block;
+  padding-top: 133.33%; /* 3:4 aspect ratio */
+}
+
+.photo-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: hidden;
-  border-radius: 0.25rem;
-  background: #f3f4f6;
+  background: #000;
+}
+
+/* Sticker layers */
+.sticker-bg-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bg-sticker {
+  position: absolute;
+  user-select: none;
+  opacity: 0.6;
+}
+
+.sticker-char-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* allow canvas clicks */
+}
+
+.char-sticker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto; /* enable drag */
+}
+
+.char-emoji {
+  line-height: 1;
+}
+
+.sticker-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  cursor: pointer;
 }
 
 .no-photos {
@@ -138,6 +169,9 @@
 }
 
 .photo {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -159,26 +193,7 @@
   justify-content: center;
   font-size: 0.75rem;
   font-weight: bold;
-}
-
-.strip-footer {
-  background: #f9fafb;
-  padding: 0.75rem;
-  text-align: center;
-  border-top: 1px solid #e5e7eb;
-}
-
-.strip-url {
-  color: #6b7280;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.strip-folder {
-  color: #9ca3af;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-  font-family: monospace;
+  z-index: 10;
 }
 
 .strip-controls {
@@ -238,6 +253,34 @@
   cursor: pointer;
   box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.4);
   min-width: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.qr-code-container {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 0.5rem;
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.qr-code-container h4 {
+  margin: 0 0 1rem;
+  color: #374151;
+  font-size: 1rem;
+}
+
+.qr-code {
+  width: 150px;
+  height: 150px;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .download-btn:hover:not(:disabled) {

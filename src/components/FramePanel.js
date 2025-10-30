@@ -1,7 +1,7 @@
 import React from 'react';
 import './FramePanel.css';
 
-const FramePanel = ({ currentFrame, onFrameChange }) => {
+const FramePanel = ({ currentFrame, onFrameChange, onThemeScatter }) => {
   const frames = [
     { id: 'default', name: 'Classic', preview: '⬜', color: '#e5e7eb' },
     { id: 'colorful', name: 'Colorful', preview: '🌈', color: 'linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57)' },
@@ -54,6 +54,7 @@ const FramePanel = ({ currentFrame, onFrameChange }) => {
               key={sticker.id}
               className="sticker-option"
               title={sticker.name}
+              onClick={() => onThemeScatter && onThemeScatter(sticker.emoji)}
             >
               <div className="sticker-preview">
                 <span className="sticker-emoji">{sticker.emoji}</span>
@@ -62,9 +63,7 @@ const FramePanel = ({ currentFrame, onFrameChange }) => {
             </button>
           ))}
         </div>
-        <p className="sticker-note">
-          * Sticker functionality coming soon!
-        </p>
+        <p className="sticker-note">* Click a themed sticker to scatter it in the background. Click again to clear.</p>
       </div>
     </div>
   );

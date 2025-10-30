@@ -1,39 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './LayoutSelector.css';
 
-const LayoutSelector = ({ onLayoutSelect, selectedLayout }) => {
+const LayoutSelector = ({ onLayoutSelect }) => {
+  const [selectedLayout, setSelectedLayout] = useState(null);
+  
   const layouts = [
     {
       id: 'layout-a',
-      name: 'Layout A',
-      photoCount: 4,
-      description: '4 Pose',
-      preview: 'vertical-strip',
-      icon: '📸📸📸📸'
+      name: 'Classic Strip',
+        photoCount: 6,
+        description: '6 Photos (2x3 Grid)',
+      preview: '/assets/layout-a.png',
+      style: 'vertical-strip'
     },
     {
-      id: 'layout-b', 
-      name: 'Layout B',
+      id: 'layout-b',
+      name: 'Triple Shot',
       photoCount: 3,
-      description: '3 Pose',
-      preview: 'vertical-strip',
-      icon: '📸📸📸'
+      description: '3 Large Photos',
+      preview: '/assets/layout-b.png',
+      style: 'vertical-strip'
     },
     {
       id: 'layout-c',
-      name: 'Layout C', 
+      name: 'Double Take',
       photoCount: 2,
-      description: '2 Pose',
-      preview: 'vertical-wide',
-      icon: '📸📸'
+      description: '2 Full-Size Photos',
+      preview: '/assets/layout-c.png',
+      style: 'vertical-wide'
     },
     {
       id: 'layout-d',
-      name: 'Layout D',
-      photoCount: 6,
-      description: '6 Pose',
-      preview: 'grid',
-      icon: '📸📸📸\n📸📸📸'
+      name: 'Photo Grid',
+        photoCount: 4,
+        description: '4 Photo Collage',
+      preview: '/assets/layout-d.png',
+      style: 'grid'
     }
   ];
 
@@ -49,33 +51,20 @@ const LayoutSelector = ({ onLayoutSelect, selectedLayout }) => {
           <div
             key={layout.id}
             className={`layout-card ${selectedLayout === layout.id ? 'selected' : ''}`}
-            onClick={() => onLayoutSelect(layout.id)}
+            onClick={() => setSelectedLayout(layout.id)}
           >
             <div className="layout-preview">
-              <div className={`preview-${layout.preview}`}>
-                {layout.photoCount <= 4 ? (
-                  Array.from({ length: layout.photoCount }, (_, i) => (
-                    <div key={i} className="preview-photo">
-                      <div className="photo-placeholder">
-                        <span className="photo-icon">📷</span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="grid-preview">
-                    {Array.from({ length: layout.photoCount }, (_, i) => (
-                      <div key={i} className="preview-photo small">
-                        <div className="photo-placeholder">
-                          <span className="photo-icon">📷</span>
-                        </div>
-                      </div>
-                    ))}
+              <div className={`preview-container preview-${layout.style} preview-${layout.id}`}>
+                <img 
+                  src={layout.preview} 
+                  alt={`${layout.name} preview`}
+                  className={`layout-preview-image ${layout.id}`}
+                />
+                <div className="layout-overlay">
+                  <div className="layout-photo-count">
+                    {layout.photoCount} Photos
                   </div>
-                )}
-              </div>
-              <div className="layout-branding">
-                <div className="brand-text">Picapica {new Date().toLocaleDateString()}</div>
-                <div className="brand-price">2025.00</div>
+                </div>
               </div>
             </div>
             

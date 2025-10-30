@@ -4,12 +4,11 @@ import './FilterPanel.css';
 const FilterPanel = ({ currentFilter, onFilterChange }) => {
   const filters = [
     { id: 'none', name: 'Original', preview: '🖼️' },
-    { id: 'bw', name: 'B&W', preview: '⚫' },
+    { id: 'grayscale', name: 'B&W', preview: '⚫' },
     { id: 'sepia', name: 'Sepia', preview: '🤎' },
     { id: 'vintage', name: 'Vintage', preview: '📸' },
-    { id: 'soft', name: 'Soft', preview: '☁️' },
-    { id: 'noir', name: 'Noir', preview: '🌑' },
-    { id: 'vivid', name: 'Vivid', preview: '🌈' }
+    { id: 'warm', name: 'Warm', preview: '�' },
+    { id: 'cool', name: 'Cool', preview: '❄️' }
   ];
 
   return (

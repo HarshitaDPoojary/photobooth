@@ -1,0 +1,91 @@
+/* Import Google Fonts as a fallback if local fonts are not present */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+.picapica-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: #111827; /* near-black */
+  font-family: 'MontserratLocal', 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+.picapica-container {
+  max-width: 780px;
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.picapica-header h1 {
+  font-size: 42px;
+  margin: 0 0 16px 0;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.picapica-header .subtitle {
+  font-size: 18px;
+  color: #374151; /* gray-700 for better contrast */
+  margin-bottom: 32px;
+  line-height: 1.5;
+}
+
+.photostrip {
+  max-width: 320px;
+  width: 60%;
+  height: auto;
+  display: block;
+  margin: 24px auto 28px auto;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+  transition: transform 0.2s ease-in-out;
+}
+
+.photostrip:hover {
+  transform: translateY(-2px);
+}
+
+.start-button {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 16px 40px;
+  background: #111827; /* dark */
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.start-button:hover {
+  background: #1f2937;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+}
+
+.tagline {
+  margin-top: 24px;
+  color: #4b5563;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.picapica-footer {
+  margin-top: 48px;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.picapica-footer a {
+  color: #111827;
+  text-decoration: underline;
+  transition: color 0.15s ease;
+}
+
+.picapica-footer a:hover {
+  color: #4b5563;
+}

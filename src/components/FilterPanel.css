@@ -55,6 +55,31 @@
   justify-content: center;
   border: 1px solid #e5e7eb;
   transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.filter-preview.none {
+  filter: none;
+}
+
+.filter-preview.grayscale {
+  filter: grayscale(100%);
+}
+
+.filter-preview.sepia {
+  filter: sepia(100%);
+}
+
+.filter-preview.vintage {
+  filter: saturate(80%) brightness(110%) contrast(85%);
+}
+
+.filter-preview.warm {
+  filter: sepia(20%) saturate(120%) hue-rotate(-10deg);
+}
+
+.filter-preview.cool {
+  filter: sepia(20%) saturate(120%) hue-rotate(10deg);
 }
 
 .filter-option.active .filter-preview {

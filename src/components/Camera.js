@@ -1,8 +1,9 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { createFolderName, createFolderAndSavePhotos, deletePhotoSession } from '../utils/fileStorage';
+import { applyFilter } from '../utils/filters';
 import './Camera.css';
 
-const Camera = ({ onPhotosTaken, isCapturing, setIsCapturing, selectedLayout }) => {
+const Camera = ({ onPhotosTaken, isCapturing, setIsCapturing, selectedLayout, currentFilter = 'none', timerDuration = 3, onFilterChange }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -10,6 +11,8 @@ const Camera = ({ onPhotosTaken, isCapturing, setIsCapturing, selectedLayout }) 
   const [photos, setPhotos] = useState([]);
   const [cameraReady, setCameraReady] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedTimer, setSelectedTimer] = useState(timerDuration);
+  const [isUploadMode, setIsUploadMode] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [savingPhotos, setSavingPhotos] = useState(false);
@@ -18,13 +21,49 @@ const Camera = ({ onPhotosTaken, isCapturing, setIsCapturing, selectedLayout }) 
   // Get photo count based on selected layout
   const getPhotoCount = useCallback(() => {
     const layoutCounts = {
-      'layout-a': 4,
+        'layout-a': 6,
       'layout-b': 3,
       'layout-c': 2,
-      'layout-d': 6
+        'layout-d': 4
     };
     return layoutCounts[selectedLayout] || 4;
   }, [selectedLayout]);
+
+  const handleFileUpload = useCallback(async (event) => {
+    const files = Array.from(event.target.files);
+    const photoCount = getPhotoCount();
+    
+    if (files.length !== photoCount) {
+      alert(`Please select exactly ${photoCount} images for this layout.`);
+      return;
+    }
+
+    const uploadedBlobs = [];
+    const uploadedUrls = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload only image files.');
+        return;
+      }
+
+      // Create a blob from the file
+      const blob = new Blob([await file.arrayBuffer()], { type: file.type });
+      uploadedBlobs.push(blob);
+      uploadedUrls.push(URL.createObjectURL(blob));
+    }
+
+    setPhotos(uploadedUrls);
+    const folderName = createFolderName();
+    const savedPhotos = await createFolderAndSavePhotos(uploadedBlobs, folderName);
+    
+    if (savedPhotos) {
+      onPhotosTaken(uploadedBlobs, folderName);
+    } else {
+      onPhotosTaken(uploadedBlobs);
+    }
+  }, [getPhotoCount, onPhotosTaken]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -104,6 +143,9 @@ const Camera = ({ onPhotosTaken, isCapturing, setIsCapturing, selectedLayout }) 
     context.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
     context.restore();
 
+    // Apply selected filter
+    applyFilter(context, canvas, currentFilter);
+
     // Convert to blob
     return new Promise((resolve) => {
       try {
@@ -139,8 +181,8 @@ const Camera = ({ onPhotosTaken, isCapturing, setIsCapturing, selectedLayout }) 
     for (let photoIndex = 0; photoIndex < photoCount; photoIndex++) {
       setCurrentPhotoIndex(photoIndex + 1);
       
-      // Countdown for each photo: 4-3-2-1
-      for (let i = 4; i > 0; i--) {
+      // Countdown based on selected timer duration
+      for (let i = selectedTimer; i > 0; i--) {
         setCountdown(i);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
@@ -239,138 +281,165 @@ const Camera = ({ onPhotosTaken, isCapturing, setIsCapturing, selectedLayout }) 
     setCurrentPhotoIndex(0);
   }, []);
 
-  // Auto-start camera on mount
+  // Handle camera based on mode
   React.useEffect(() => {
-    startCamera();
+    if (!isUploadMode) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
     return () => {
       stopCamera();
       // Clean up object URLs
       photos.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [startCamera, stopCamera, photos]);
+  }, [startCamera, stopCamera, photos, isUploadMode]);
+
+  const filters = [
+    { id: 'none', name: 'No Filter' },
+    { id: 'grayscale', name: 'B&W' },
+    { id: 'sepia', name: 'Sepia' },
+    { id: 'vintage', name: 'Vintage' },
+    { id: 'soft', name: 'Soft' },
+    { id: 'noir', name: 'Noir' },
+    { id: 'vivid', name: 'Vivid' }
+  ];
 
   return (
-    <div className="camera-container">
-      <div className="camera-wrapper">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className={`camera-video ${!cameraReady ? 'hidden' : ''}`}
-        />
-        <canvas ref={canvasRef} className="hidden" />
-        
-        {!cameraReady && !error && !cameraLoading && (
-          <div className="camera-placeholder">
-            <div className="camera-icon">📷</div>
-            <p className="text-white text-lg mb-4">Camera not started</p>
-            <button 
-              onClick={startCamera}
-              className="start-camera-btn"
-            >
-              Start Camera
-            </button>
-          </div>
-        )}
+    <div className="camera-page">
+      <div className="mode-switcher">
+        <button
+          className={`mode-btn ${!isUploadMode ? 'active' : ''}`}
+          onClick={() => setIsUploadMode(false)}
+        >
+          Camera
+        </button>
+        <button
+          className={`mode-btn ${isUploadMode ? 'active' : ''}`}
+          onClick={() => setIsUploadMode(true)}
+        >
+          Upload Images
+        </button>
+      </div>
 
-        {cameraLoading && (
-          <div className="camera-loading">
-            <div className="loading-spinner"></div>
-            <p className="text-white text-lg mb-4">Starting camera...</p>
-            <p className="text-white text-sm">Please allow camera access when prompted</p>
-          </div>
-        )}
+      <div className="layout-info">
+        Selected layout: Layout {selectedLayout?.replace('layout-', '').toUpperCase()} ({getPhotoCount()} photos)
+      </div>
 
-        {error && (
-          <div className="camera-error">
-            <div className="error-icon">⚠️</div>
-            <p className="text-white text-lg mb-4">{error}</p>
-            <button 
-              onClick={startCamera}
-              className="retry-btn"
-            >
-              Try Again
-            </button>
-          </div>
-        )}
+      <div className="camera-section">
+        {/* Camera feed */}
+        <div className="camera-container">
+          {!isUploadMode ? (
+            <div className="camera-view">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`camera-video ${!cameraReady ? 'hidden' : ''} ${currentFilter}`}
+              />
+              <canvas ref={canvasRef} className="hidden" />
 
-        {cameraReady && (
-          <div className="camera-overlay">
-            {countdown > 0 && (
-              <div className="countdown">
-                <div className="countdown-number">{countdown}</div>
-                <div className="countdown-text">
-                  Photo {currentPhotoIndex} - Get ready!
+              {/* Overlays inside camera */}
+              {!cameraReady && !error && !cameraLoading && (
+                <div className="camera-placeholder">
+                  <div className="camera-icon">📷</div>
+                  <p className="text-white text-lg mb-4">Camera not started</p>
+                  <button onClick={startCamera} className="start-camera-btn">Start Camera</button>
                 </div>
-              </div>
-            )}
-            
-            {isCapturing && countdown === 0 && (
-              <div className="capturing">
-                <div className="capturing-text">Say Cheese! 📸</div>
-                <div className="photo-counter">
-                  Photo {currentPhotoIndex} of {getPhotoCount()}
+              )}
+
+              {cameraLoading && (
+                <div className="camera-loading">
+                  <div className="loading-spinner"></div>
                 </div>
-                <div className="photo-progress">
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill" 
-                      style={{ width: `${(currentPhotoIndex / getPhotoCount()) * 100}%` }}
-                    ></div>
-                  </div>
+              )}
+
+              {error && (
+                <div className="camera-error">
+                  <div className="error-icon">⚠️</div>
+                  <p className="text-white">{error}</p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {!isCapturing && countdown === 0 && photos.length === 0 && cameraReady && (
-              <div className="camera-controls">
-                <button 
-                  onClick={startPhotoSequence}
-                  className="capture-btn"
-                  disabled={isCapturing}
-                >
-                  Take {getPhotoCount()} Photos
-                </button>
-              </div>
-            )}
+              {countdown > 0 && (
+                <div className="countdown">
+                  <div className="countdown-number">{countdown}</div>
+                </div>
+              )}
 
-            {photos.length > 0 && photos.length < getPhotoCount() && !isCapturing && !savingPhotos && (
-              <div className="camera-controls">
-                <button 
-                  onClick={retakePhotos}
-                  className="retake-btn"
-                >
-                  Retake
-                </button>
-              </div>
-            )}
+              {isCapturing && countdown === 0 && (
+                <div className="capturing">
+                  <div className="capturing-text">Say Cheese! 📸</div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="upload-section">
+              <label htmlFor="photo-upload" className="upload-btn">
+                📤 Select {getPhotoCount()} Photos to Upload
+                <input
+                  type="file"
+                  id="photo-upload"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
+        </div>
 
-            {savingPhotos && (
-              <div className="saving-photos">
-                <div className="loading-spinner"></div>
-                <div className="saving-text">Saving photos...</div>
-              </div>
+        {/* Controls below the camera */}
+        <div className="controls-section">
+          <div className="timer-selector">
+            <label htmlFor="timer-select" className="timer-label">Timer (seconds):</label>
+            <select id="timer-select" value={selectedTimer} onChange={(e) => setSelectedTimer(Number(e.target.value))} className="timer-select">
+              <option value="3">3s</option>
+              <option value="5">5s</option>
+              <option value="7">7s</option>
+              <option value="10">10s</option>
+            </select>
+          </div>
+
+          <div className="filter-strip">
+            {filters.map(filter => (
+              <button key={filter.id} className={`filter-option ${currentFilter === filter.id ? 'active' : ''}`} onClick={() => onFilterChange(filter.id)}>
+                <div className={`filter-preview ${filter.id}`}><span className="filter-icon">📷</span></div>
+                <span className="filter-name">{filter.name}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="action-buttons">
+            {photos.length > 0 && photos.length < getPhotoCount() ? (
+              <button onClick={retakePhotos} className="retake-btn">Retake Photos</button>
+            ) : (
+              <button onClick={startPhotoSequence} className="capture-btn" disabled={isCapturing || !cameraReady}>Take {getPhotoCount()} Photos</button>
             )}
+          </div>
+
+          {savingPhotos && (
+            <div className="saving-photos">
+              <div className="loading-spinner"></div>
+              <div className="saving-text">Saving photos...</div>
+            </div>
+          )}
+        </div>
+
+        {/* Photo Preview */}
+        {photos.length > 0 && (
+          <div className="photo-preview">
+            <h3 className="text-white text-lg mb-2">Captured Photos:</h3>
+            <div className="preview-grid">
+              {photos.map((photo, index) => (
+                <img key={index} src={photo} alt={`Photo ${index + 1}`} className={`preview-photo ${currentFilter}`} />
+              ))}
+            </div>
           </div>
         )}
       </div>
-
-      {photos.length > 0 && (
-        <div className="photo-preview">
-          <h3 className="text-white text-lg mb-2">Captured Photos:</h3>
-          <div className="preview-grid">
-            {photos.map((photo, index) => (
-              <img
-                key={index}
-                src={photo}
-                alt={`Photo ${index + 1}`}
-                className="preview-photo"
-              />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
